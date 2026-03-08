@@ -51,7 +51,7 @@ The full Research-Plan-Implement pattern adapted for GitHub Copilot, based on Hu
 
 ### Known Error Patterns (`patterns/`)
 
-A catalog of 17 recurring agent errors documented from real sessions. Each entry includes the symptom, root cause, correct approach, and what to avoid:
+A catalog of 26 recurring agent errors documented from real sessions. Each entry includes the symptom, root cause, correct approach, and what to avoid:
 
 - Git operations (pre-commit hooks, push rejections, worktrees)
 - GitHub CLI (`gh` field names, CI status checking)
@@ -71,7 +71,7 @@ Ready-to-use starting points for new projects:
 - **VS Code settings template** — `.vscode/settings.json` for Copilot configuration
 - **MCP config template** — `.vscode/mcp.json` for external tool access
 - **Setup checklist** — Step-by-step guide including prompt files, instructions, chatmodes, CI, and hooks
-- **Prompt files** — `/bootstrap`, `/adopt`, `/research`, `/plan`, `/implement`, `/validate`, `/quality-review`, `/describe-pr`, `/pre-launch`
+- **Prompt files** — `/bootstrap`, `/adopt`, `/research`, `/plan`, `/implement`, `/validate`, `/quality-review`, `/describe-pr`, `/pre-launch`, `/status`, `/fix-ci`
 - **Path-specific instructions** — Auto-loaded rules for tests, APIs, and migrations
 - **Chat modes** — RPI Research (documentarian), RPI Planner (interactive planning), RPI Auditor (validation)
 

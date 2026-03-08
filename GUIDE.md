@@ -105,6 +105,8 @@ That's it. Those four commands are 90% of your interaction with the methodology.
 | `/quality-review` | Reviews changed files for code reuse, quality, and efficiency. Finds issues and fixes them interactively. | After each implementation phase, or after a `/pre-launch` audit. |
 | `/describe-pr` | Generates a PR description from the current branch's diff and commit history. | Before opening or updating a PR. |
 | `/pre-launch` | Runs a comprehensive multi-domain audit (QA, security, performance, architecture, UX, devops). Recommends `/quality-review` for code quality findings. | Before any production release. |
+| `/status` | Quick 5-line project orientation: branch, last commit, working tree, CI status, open items. | Start of session. Quick check without starting a full task. |
+| `/fix-ci` | Self-healing CI: gets failure logs, spawns parallel fix agents per failure category, iterates until green or retry budget exhausted. | When CI is red. Automates the diagnose-fix-verify loop. |
 
 ### Copilot-Specific Features
 
@@ -195,7 +197,7 @@ Use the **RPI Research** chat mode to enforce this structurally at the session l
 
 ### Error Prevention
 
-The blueprint includes 22 operational rules learned from real sessions — including 6 Copilot-specific rules covering prompt file frontmatter, `${input:var}` syntax, instruction file globs, CLI auth, auto-compaction, and chatmode directories.
+The blueprint includes 27 operational rules learned from real sessions — including 6 Copilot-specific rules covering prompt file frontmatter, `${input:var}` syntax, instruction file globs, CLI auth, auto-compaction, and chatmode directories.
 
 When your project is set up via the blueprint, these rules are baked into the AGENTS.md file that every tool reads every session.
 
@@ -239,7 +241,9 @@ your-project/
 │   │   ├── implement.prompt.md
 │   │   ├── validate.prompt.md
 │   │   ├── describe-pr.prompt.md
-│   │   └── pre-launch.prompt.md
+│   │   ├── pre-launch.prompt.md
+│   │   ├── status.prompt.md
+│   │   └── fix-ci.prompt.md
 │   ├── instructions/                 # Path-specific rules (auto-loaded)
 │   │   ├── tests.instructions.md
 │   │   └── api.instructions.md
@@ -297,8 +301,8 @@ The blueprint adapts to six project archetypes: web applications, libraries, CLI
 | Plan notation | `methodology/pseudocode-notation.md` | How to write and read implementation plans |
 | Testing approach | `methodology/testing.md` | TDD protocol, verification hierarchy |
 | CI ownership | `methodology/push-accountability.md` | Background CI monitoring, fix-and-repush |
-| Error patterns | `patterns/agent-errors.md` | 21 documented errors with symptoms and solutions |
-| Operational rules | `patterns/quick-reference.md` | 22 rules to prevent known mistakes |
+| Error patterns | `patterns/agent-errors.md` | 26 documented errors with symptoms and solutions |
+| Operational rules | `patterns/quick-reference.md` | 27 rules to prevent known mistakes |
 | Worked examples | `examples/README.md` | Sample research docs, plans, logs, pseudocode |
 
 ## Credits

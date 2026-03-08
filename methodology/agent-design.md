@@ -274,6 +274,53 @@ Each produces findings categorized as **blockers** (must fix), **warnings** (sho
 
 ---
 
+## Git Protocol for Multi-Agent Work
+
+When multiple agents operate in parallel (`copilot -p` processes, `@copilot` cloud agents, or concurrent sessions), git operations are the primary source of conflicts. These rules prevent wrong-branch pushes, merge conflicts, and orphaned references.
+
+### Central Commit Rule
+
+**Designate one agent or process as the git committer.** Parallel agents write code but do not commit independently to shared branches.
+
+| Agent Role | Can Edit Files | Can git commit | Can git push |
+|------------|:-:|:-:|:-:|
+| Main session / Lead agent | Yes | Yes | Yes |
+| Background `copilot -p` agent | Yes | No | No |
+| `@copilot` cloud agent | Yes | Yes (own branch) | Yes (opens PR) |
+| Fan-out `copilot -p` unit | Yes (in worktree) | Yes (isolated branch) | Yes (opens PR) |
+
+`@copilot` cloud agents and fan-out units are exceptions — they create isolated branches with their own PRs, so each can safely commit without conflicts.
+
+### Branch Verification Before Every Commit
+
+Before any `git commit`, the agent must run `git branch --show-current` and verify the result matches the intended target. This applies even when the user said "push to develop" earlier in the conversation — git state is the source of truth, not conversation memory.
+
+### File Ownership for Parallel Agents
+
+When spawning parallel agents, assign distinct file sets to each:
+
+```text
+Agent 1: src/auth/*.ts, tests/auth/*.ts
+Agent 2: src/api/*.ts, tests/api/*.ts
+Agent 3: src/utils/*.ts, tests/utils/*.ts
+```
+
+If two agents must touch the same file, run them sequentially or have the second agent read the first agent's output before starting.
+
+### Branch Strategy for Agent Orchestration
+
+For complex multi-agent work:
+
+1. Each agent creates a branch: `agent/<task-slug>`
+2. Each agent completes work with passing tests on its branch
+3. The orchestrator merges agent branches into the target branch sequentially
+4. After each merge, run the full test suite — if it breaks, fix before proceeding
+5. Delete agent branches after successful merge
+
+This pattern is more complex than central commit but necessary when agents need full git access (e.g., agents running in separate worktrees).
+
+---
+
 ## Agent Autonomy Principles
 
 Agents should maximize what they accomplish autonomously before requesting human intervention.

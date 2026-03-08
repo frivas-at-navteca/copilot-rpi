@@ -54,6 +54,18 @@ These rules must be internalized before starting any work. They prevent the most
 
 6. **Chat mode files must be in `.github/chatmodes/`** — placing them anywhere else (e.g., `.github/prompts/` or project root) means they won't appear as selectable chat modes in VS Code.
 
+## Branch & Multi-Agent Rules
+
+1. **Always verify the current branch before committing** — run `git branch --show-current` before any `git commit`. Don't assume the branch from conversation context — git state may have changed. If the user hasn't specified a branch, ask.
+
+2. **Designate one agent or process as the git committer** — parallel agents write changes to their working directories. The committing agent reviews all changes, runs tests, and commits centrally. This prevents wrong-branch pushes and merge conflicts from parallel agents.
+
+3. **Run the full test suite after config or infrastructure changes** — config changes (tsconfig, eslint, package.json, .env, migrations, CI workflows) have broader blast radius than code changes. A single tsconfig modification can break hundreds of files. Always run `typecheck; lint; test` immediately after config changes, before proceeding.
+
+4. **Run project scaffolding tools BEFORE adding config files** — `create-next-app`, `create-vite`, etc. require an empty directory. Creating AGENTS.md or `.github/` first causes the scaffolder to abort. Scaffold first, configure second.
+
+5. **Never pipe `curl` directly to a JSON parser** — `curl | jq` or `curl | python3 json.load()` crashes with unhelpful parse errors when the API returns non-JSON (HTML error pages, auth failures, rate limits). Save the response first and check HTTP status, or use `curl -sf` to fail on errors.
+
 ## launchd Rules
 
 1. **launchd plist must NOT run project scripts directly** — `<string>/project/scripts/agent.sh</string>` in ProgramArguments causes CLI crashes when the script is inside a project directory. Use `/bin/bash -c "exec /bin/bash <script>"` wrapper instead. Exit code may be 0 despite the error, so preflight checks silently pass.

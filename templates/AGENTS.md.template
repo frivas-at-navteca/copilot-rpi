@@ -80,6 +80,8 @@ Chain with `;`: `pnpm run typecheck 2>&1; pnpm run lint 2>&1`
 3. Release to production via PR: `develop` → `main`
 4. Always run checks before committing (pre-commit hooks enforce this)
 5. Always commit before pulling — `git pull --rebase` requires a clean working tree
+6. **Before any commit, verify the current branch** — run `git branch --show-current` and confirm it matches your intent. If the user hasn't specified a branch, ask.
+7. After config, dependency, or infrastructure changes, **immediately run the full test suite** before proceeding to the next task
 
 ### Commit Messages
 
@@ -118,6 +120,10 @@ git worktree remove --force <path>; git branch -D <branch>
 - Run typecheck/lint BEFORE committing (pre-commit hooks run the same checks)
 - Remove worktrees BEFORE merging PRs with `--delete-branch`
 - Never fabricate filesystem paths — use the working directory or discover with `ls`
+
+### Parallel Agent Rules
+- **Designate one agent or process as the git committer.** Parallel agents (`copilot -p`, `@copilot` cloud agents) write changes to their working directories. The lead agent reviews the changes, runs tests, and commits centrally. This prevents wrong-branch pushes and merge conflicts.
+- Exception: `@copilot` cloud agents and fan-out units that create isolated branches with their own PRs can commit safely.
 
 ### GitHub CLI
 - Don't guess `gh --json` field names — query available fields first

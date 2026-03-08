@@ -505,3 +505,172 @@ cd /Users/name/projects/old-name/src
 ```
 
 **Key detail:** The working directory is always available from the environment. For cross-project operations, use `ls` or file search to discover paths — never guess directory names. Even plausible-sounding names like `Projects` or `repos` are often wrong.
+
+---
+
+## Error #22: Scaffolding tool fails on non-empty directory
+
+**Symptom:** `create-next-app`, `create-vite`, or similar scaffolding tools abort with errors like "The directory contains files that could conflict" or "Directory is not empty." The agent created AGENTS.md, `.github/`, or other config files before running the scaffolding tool.
+
+**Root cause:** Most scaffolding tools require an empty directory (or create a new one). When the agent sets up project configuration first — creating AGENTS.md, `.github/prompts/`, instruction files — then tries to run the scaffolding tool, it finds existing files and refuses to proceed. The agent is following the blueprint setup order, but scaffolding tools expect to be first.
+
+**Correct approach — always do this:**
+
+```bash
+# Run the scaffolding tool FIRST, in a clean directory:
+npx create-next-app@latest my-project
+# or: npm create vite@latest my-project
+
+# THEN add project configuration:
+cd my-project
+# Create AGENTS.md, .github/prompts/, .vscode/settings.json, etc.
+```
+
+**Never do this:**
+
+```bash
+# Don't create config files before scaffolding:
+mkdir my-project && cd my-project
+# Create AGENTS.md, .github/prompts/, etc.
+npx create-next-app@latest .
+# ← FAILS: directory is not empty
+```
+
+**Key detail:** This applies to any tool that generates a project skeleton: `create-next-app`, `create-vite`, `create-react-app`, `cargo init`, `django-admin startproject`, `rails new`, `dotnet new`. The rule is always: scaffold first, configure second.
+
+---
+
+## Error #23: Piping API response to JSON parser without error checking
+
+**Symptom:** `curl | jq` or `curl | python3 -c "import json; ..."` crashes with parse errors like "parse error (Invalid numeric literal)" or "json.decoder.JSONDecodeError: Expecting value." The API returned HTML (error page, auth failure, rate limit response) instead of JSON.
+
+**Root cause:** The agent pipes `curl` output directly to a JSON parser without checking the HTTP status code or response content type. When the API returns a non-JSON response (HTML error page, plain-text auth failure, rate limit message), the parser receives invalid input and produces a confusing error that doesn't mention the actual problem.
+
+**Correct approach — always do this:**
+
+```bash
+# Save response and check status first:
+RESPONSE=$(curl -sf "$URL") || { echo "HTTP error"; exit 1; }
+echo "$RESPONSE" | jq '.results'
+
+# Or use curl's built-in failure mode:
+curl -sf "$URL" | jq '.results'
+# -s = silent, -f = fail on HTTP errors (exit code 22)
+```
+
+**Never do this:**
+
+```bash
+# Don't pipe curl directly to a parser:
+curl -s "$URL" | jq '.results[0].name'
+# ← crashes with parse error if API returns HTML/text
+
+# Don't assume API responses are always JSON:
+curl "$URL" | python3 -c "import json,sys; print(json.load(sys.stdin)['key'])"
+# ← JSONDecodeError if response isn't JSON
+```
+
+**Key detail:** This is especially common with API keys passed via environment variables (`$API_KEY`). If the variable is unset or expired, the API returns an auth error in HTML/text format, and the JSON parser produces a confusing traceback that doesn't mention the actual auth problem. Always validate the response before parsing.
+
+---
+
+## Error #24: Agent commits or pushes to the wrong branch
+
+**Symptom:** Agent pushes code to `main`, `master`, or a feature branch other than the intended target. The user discovers the wrong-branch push after the fact, requiring manual branch surgery: cherry-picking commits, resetting branches, and force-pushing to fix the history.
+
+**Root cause:** The agent doesn't verify the current branch before committing. It assumes it's on the right branch based on conversation context, but the actual git state may differ — especially after switching tasks, resuming sessions, or when parallel agents operate independently. This is the git equivalent of "measure twice, cut once" — the agent cuts without measuring.
+
+**Correct approach — always do this:**
+
+```bash
+# ALWAYS verify branch before any commit:
+git branch --show-current   # Confirm this is the branch you intend to commit to
+
+# If unsure, ask the user which branch to target.
+# Then commit and push:
+git add <files> && git commit -m "msg" && git pull --rebase && git push
+```
+
+**Never do this:**
+
+```bash
+# Don't commit without checking the branch:
+git add . && git commit -m "feat: add feature" && git push
+# ← May push to main, master, or wrong feature branch
+
+# Don't assume the branch from conversation context:
+# User said "push to develop" 50 messages ago — verify git state NOW
+```
+
+**Key detail:** This is especially damaging when pushing to `main`/`master` (production). The agent should verify before committing to any branch. Parallel agents are particularly prone to this — they don't inherit the parent's conversation context about which branch to target.
+
+---
+
+## Error #25: Parallel agents create git conflicts from overlapping work
+
+**Symptom:** Multiple parallel agents (background `copilot -p` processes, `@copilot` cloud agents, or concurrent sessions) make changes independently. When their work is combined, there are merge conflicts, overlapping file edits, or orphaned references — imports to deleted functions, tests for renamed methods, or duplicate utility files.
+
+**Root cause:** Parallel agents operate in isolated contexts and don't see each other's changes. When two agents edit the same file (or files that reference each other), the results conflict. The orchestrating workflow doesn't enforce file ownership boundaries or centralize git operations.
+
+**Correct approach — always do this:**
+
+```text
+When orchestrating parallel agents:
+1. Break work so each agent owns DISTINCT files — no overlap
+2. Designate one agent or process as the git committer
+3. Parallel agents write changes to working directories or /tmp/agent-<name>/
+4. The committing process reviews all changes for conflicts before committing
+5. Run the full test suite AFTER combining all agent output
+```
+
+**Never do this:**
+
+```text
+# Don't let parallel agents commit independently to the same branch:
+copilot -p "Fix auth module, commit and push" &
+copilot -p "Fix API module, commit and push" &
+wait
+# ← Race condition, merge conflicts, overlapping edits
+
+# Don't assume parallel agents produce compatible output:
+# Even if each agent's changes pass tests individually,
+# the COMBINED changes may conflict
+```
+
+**Key detail:** `@copilot` cloud agents are particularly susceptible because each creates its own branch and PR. If two cloud agents touch related files, their PRs may conflict when merged. For related work, use sequential cloud agent assignments or ensure strict file ownership boundaries in the issue descriptions.
+
+---
+
+## Error #26: Agent skips test suite after config or infrastructure changes
+
+**Symptom:** Agent modifies configuration files (tsconfig, eslint config, package.json, environment variables, database config, CI workflows) and immediately proceeds to the next task without running tests. Later — or in a subsequent session — tests fail due to the config change. The agent then burns multiple rounds debugging failures that could have been caught immediately.
+
+**Root cause:** The agent treats config changes as "not code" and doesn't apply the same verify-after-change discipline it uses for source code. But config changes often have broader blast radius than code changes — a single tsconfig modification can break hundreds of files, and a dependency update can introduce incompatibilities across the entire test suite.
+
+**Correct approach — always do this:**
+
+```bash
+# After ANY config or infrastructure change, immediately run the full suite:
+pnpm run typecheck 2>&1; pnpm run lint 2>&1; pnpm run test 2>&1
+
+# This applies to ALL of these:
+# - tsconfig.json, eslint.config.*, prettier.config.*
+# - package.json (dependencies, scripts, engines)
+# - .env files, environment variable changes
+# - Database migrations, schema changes
+# - CI/CD workflow files
+# - Docker/container configuration
+# - Build configuration (vite.config, next.config, webpack.config)
+```
+
+**Never do this:**
+
+```bash
+# Don't modify config and move on without testing:
+# Edit tsconfig.json to add strict mode
+# Edit next.config.js to change build output
+# → Immediately start writing new feature code
+# ← Tests are now broken but you won't find out until much later
+```
+
+**Key detail:** Config changes have a multiplicative failure pattern — they can break files the agent never touched. Running the test suite immediately after a config change costs minutes but saves the multi-round debug cycles that happen when failures are discovered later with more changes stacked on top.
