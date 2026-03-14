@@ -78,7 +78,12 @@ copilot-rpi/
     │   ├── validate.prompt.md        # /validate — verification
     │   ├── quality-review.prompt.md  # /quality-review — code reuse, quality, efficiency review
     │   ├── describe-pr.prompt.md     # /describe-pr — PR description
-    │   └── pre-launch.prompt.md      # /pre-launch — production audit
+    │   ├── pre-launch.prompt.md      # /pre-launch — production audit
+    │   ├── status.prompt.md          # /status — quick project orientation
+    │   ├── fix-ci.prompt.md          # /fix-ci — self-healing CI
+    │   ├── detach.prompt.md          # /detach — clean removal of copilot-rpi
+    │   ├── release.prompt.md         # /release — version release automation
+    │   └── update-docs.prompt.md     # /update-docs — comprehensive docs refresh
     ├── scripts/                      # Agent shell script templates
     │   └── copilot-rpi-update-agent.sh  # Nightly blueprint sync agent
     └── github/                       # Copilot-specific templates

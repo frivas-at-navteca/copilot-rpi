@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.8.0] - 2026-03-14
+
+### Added
+
+- **`/release` prompt** -- project-type-flexible release automation. Detects project type (npm, Rust, Python, Go, docs-only) and branching strategy (main-only vs feature-branch). Bumps versions in all manifest files and references, generates CHANGELOG entry from categorized commits, creates release commit and annotated tag, publishes GitHub release, and advises on registry publish (advisory only). Includes error guards (#20, #29) and 3 human confirmation gates.
+- **`/update-docs` prompt** -- comprehensive documentation refresh. Investigates 4 areas (change analysis, documentation inventory, diagram analysis, version reference scan) to build an update plan from changes since the last release. After user approval, sequentially updates all markdown files, Mermaid diagrams, version badges/references, counts, and inline code docs (JSDoc, Python docstrings, Rust doc comments). Flags uncertain diagrams as `[NEEDS REVIEW]`. Saves report to `docs/agents/update-docs-report.md`.
+
 ## [1.7.0] - 2026-03-14
 
 ### Added
