@@ -132,7 +132,8 @@ Present what will be tagged and published, then proceed after approval.
 
 5. **STOP.** Tell the user to review and merge the PR. After merge,
    provide the commands to tag and release:
-   ```
+
+   ```bash
    git checkout main && git pull
    git tag -a vX.Y.Z -m "vX.Y.Z"
    git push origin vX.Y.Z

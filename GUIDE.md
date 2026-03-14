@@ -113,7 +113,7 @@ That's it. Those four commands are 90% of your interaction with the methodology.
 
 The recommended pre-release sequence:
 
-```
+```text
 /pre-launch -> fix findings -> /update-docs -> /release
 ```
 
