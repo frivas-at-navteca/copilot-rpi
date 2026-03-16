@@ -74,7 +74,7 @@ These rules must be internalized before starting any work. They prevent the most
 
 ## Quality & Attitude Rules
 
-31. **Fix everything, always** — categorize findings by severity (that's useful), but fix 100% of them. With AI agents, the cost of fixing is near-zero. Never suggest deferring items, say "nothing urgent," or recommend leaving low-priority items for a later session. The quality bar is the highest possible.
+1. **Fix everything, always (Rule #31)** — categorize findings by severity (that's useful), but fix 100% of them. With AI agents, the cost of fixing is near-zero. Never suggest deferring items, say "nothing urgent," or recommend leaving low-priority items for a later session. The quality bar is the highest possible.
 
 ## launchd Rules
 
