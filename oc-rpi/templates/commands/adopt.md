@@ -1,0 +1,121 @@
+---
+description: Audit an existing project and adopt oc-rpi best practices
+---
+# Adopt oc-rpi Best Practices into Existing Project
+
+You are auditing and migrating an existing project to follow the oc-rpi blueprint.
+The blueprint lives at `$ARGUMENTS`.
+
+This project already exists and may already follow some practices.
+Your job is to assess what's in place, identify gaps, and create a migration plan —
+NOT to blindly overwrite what's already working.
+
+## Phase 1: Learn the Rules
+
+Read these files from oc-rpi IN ORDER:
+
+1. `patterns/quick-reference.md` — Internalize every operational rule.
+2. `patterns/agent-errors.md` — Know every error pattern and its solution.
+3. `methodology/README.md` — Read the one-paragraph summary.
+4. `oc-rpi/templates/setup-checklist.md` — Understand the target state.
+5. `oc-rpi/templates/AGENTS.md.template` — Know what a well-configured AGENTS.md looks like.
+
+## Phase 2: Audit This Project
+
+Investigate THIS project systematically:
+
+**Configuration:** Does `AGENTS.md` exist? `opencode.json`? `.opencode/commands/`?
+`.opencode/agents/`? Instruction globs in `opencode.json`?
+
+**Infrastructure:** What's the stack? Pre-commit hooks? CI? Git workflow? README?
+
+**Workflow:** Does `docs/` exist? Research documents, plans, decision records? Testing setup?
+
+## Phase 3: Present the Audit Report
+
+### What's Already In Place
+
+List everything that aligns with oc-rpi practices.
+
+### What's Missing (by priority)
+
+**HIGH:** Missing AGENTS.md, no command files, no docs/ structure
+**MEDIUM:** No pre-commit hooks, incomplete CI, no instruction globs
+**LOW:** No agents, no scheduled scripts, no error logging
+
+### What Needs Adaptation (Not Replacement)
+
+Things that exist but differ from the blueprint.
+
+## Phase 4: Get Approval and Execute
+
+1. Ask which items to adopt and which to skip.
+2. Ask about conflicts with existing conventions.
+3. Create a migration checklist.
+4. Execute item by item, confirming after each major change.
+
+## Phase 5: Save to Memory
+
+Create `docs/agents/project-memory.md` with the following structure,
+filled in from everything you learned during the audit and adoption:
+
+```markdown
+# Project Memory
+
+Operational knowledge that persists across sessions.
+Agents read this at session start and append lessons as they work.
+
+## Project Identity
+
+- **Name:** [project name]
+- **Type:** [web app / library / CLI / monorepo / etc.]
+- **Stack:** [language, framework, key libraries]
+- **Default branch:** [develop / main]
+- **Production branch:** [main]
+
+## Audit Findings
+
+[Key findings from the Phase 2 audit — what was already in place,
+what was missing, what was adapted]
+
+## Key Decisions
+
+[Decisions made during adoption — what was adopted, what was skipped, and why]
+
+## Project Conventions
+
+[Existing conventions that were preserved — naming, structure, workflow patterns
+already in use]
+
+## CI/CD & Environment
+
+[CI provider, required checks, environment variables, deployment targets]
+
+## Operational Lessons
+
+[Append new lessons here as they are discovered — one line per lesson]
+```
+
+Fill every section from what you learned in Phases 1–4. Don't leave placeholders.
+
+## Recommended Next Step
+
+After adoption is complete, suggest the user run `/pre-launch` in a new session
+to baseline their codebase quality. `/pre-launch` audits 6 domains (architecture, QA,
+security, performance, UX, infrastructure) and produces a report with blockers,
+warnings, and recommendations.
+
+For code quality findings (dead code, duplicates, inefficiencies), `/quality-review`
+handles fixes interactively. Security, infrastructure, and accessibility findings
+require manual implementation or a targeted `/implement` cycle.
+
+This is optional but recommended — it gives adopters a clear picture of their
+codebase health under the new methodology.
+
+## Rules
+
+- **Audit first, change nothing.** No files modified until user approves.
+- **Respect what exists.** Don't overwrite working configurations.
+- **Merge, don't replace.** Add missing pieces to existing files.
+- **One thing at a time.** Logical, reviewable changes.
+- **Always save to memory.** Phase 5 is not optional. Every adoption must end with a memory save.
