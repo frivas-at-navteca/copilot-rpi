@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-03-26
+
+### Added
+
+- **Rules #42-43: Local-only agent reports and timestamp-based triage discovery** -- `docs/agents/`, `logs/`, and `scripts/agents/` are gitignored in all projects. Triage uses `.last-triage` marker file instead of git status for report discovery.
+- **`templates/scripts/agents/lib/agent-utils.sh`** -- shared utility library for all agent scripts. Handles environment setup, fd limits, auth preflight, logging, and shared context read/write/prune.
+- **`templates/scripts/agents/install-agents.sh`** -- automated launchd installer. Auto-discovers agent scripts via `# SCHEDULE:` comments, generates plists with all four launchd gotcha fixes.
+- **Report Lifecycle** section in `methodology/scheduled-agents.md` -- codifies the separation between operational reports (local-only) and code fixes (committed).
+
+### Changed
+
+- **AGENTS.md template** -- context pressure optimization: "Agent Operational Rules" section (31 lines of rule lists) replaced with "Working Patterns" section (4 canonical examples in `<examples>` tags). "Push Accountability", "Agent Autonomy", and "Memory Management" sections slimmed. Project file locations updated to note gitignored agent output.
+- **`patterns/quick-reference.md`** -- restructured with scope/stack tags on every rule. Sections reorganized by domain. Wording tightened per Anthropic Claude 4.6 guidance. Rule count: 41 to 43.
+- **`/triage` prompt** -- Step 1 rewritten: three-layer git-based scan replaced with timestamp-based discovery. Step 4 rewritten: two-commit strategy replaced with single commit (fixes only) plus `.last-triage` marker touch.
+- **Agent shell script template** in `methodology/scheduled-agents.md` -- now sources `lib/agent-utils.sh`. Uses `SHARED_CONTEXT_START/END` blocks and `# SCHEDULE:` comments. Automated launchd installation via `install-agents.sh` is now recommended.
+- **Setup checklist** -- scheduled agents section updated with gitignore, `agent-utils.sh`, `install-agents.sh`, and `# SCHEDULE:` steps.
+
 ## [1.11.0] - 2026-03-25
 
 ### Added

@@ -23,3 +23,13 @@ yarn.lock
 # Environment
 .env
 .env.local
+
+# Agent operational output (never committed)
+docs/agents/
+logs/
+scripts/agents/
+
+# Internal working docs
+docs/research/
+docs/plans/
+docs/decisions/

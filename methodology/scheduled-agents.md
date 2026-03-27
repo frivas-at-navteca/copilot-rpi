@@ -1,6 +1,6 @@
 # Scheduled Agents
 
-Scheduled agents run outside of interactive sessions on a recurring schedule. They perform maintenance, audits, and health checks automatically — catching issues before humans or interactive agents encounter them.
+Scheduled agents run outside of interactive sessions on a recurring schedule. They perform maintenance, audits, and health checks automatically -- catching issues before humans or interactive agents encounter them.
 
 ## Architecture
 
@@ -26,56 +26,88 @@ Scheduled agents run outside of interactive sessions on a recurring schedule. Th
 
 **Key idea:** Each agent is a standalone bash script that invokes the Copilot CLI in headless mode (`copilot -p "prompt"`). Agents write markdown reports to disk. An optional admin panel reads those reports and displays health status.
 
+## Report Lifecycle
+
+Agent reports are internal operational tools, not project artifacts. They follow a strict lifecycle that applies to all projects -- open-source and closed-source alike:
+
+1. **Agents write reports to `docs/agents/`** on disk during overnight runs.
+2. **Reports accumulate historically** -- never deleted, always available for review.
+3. **Reports are never committed to version control.** `docs/agents/`, `logs/`, and `scripts/agents/` are gitignored.
+4. **Triage discovers reports via timestamps**, not git status. A `.last-triage` marker file in `docs/agents/` tracks which reports have been processed.
+5. **Only code fixes are committed.** When triage resolves findings, the fix goes into git. The report that triggered the fix stays local.
+
+### Required `.gitignore` entries
+
+Every project using scheduled agents must gitignore these directories:
+
+```gitignore
+# Agent operational output (never committed)
+docs/agents/
+logs/
+scripts/agents/
+```
+
 ## Agent Shell Script Template
+
+Each agent script sources `agent-utils.sh` for environment setup, logging, shared context, and CLI preflight. The `# SCHEDULE:` comment is read by `install-agents.sh` to auto-generate launchd plists.
 
 ```bash
 #!/bin/bash
 # scripts/agents/my-agent.sh
+# SCHEDULE: daily 06:00
 
-set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "${SCRIPT_DIR}/lib/agent-utils.sh"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AGENT_KEY="my_agent"
+REPORT_FILE="${AGENTS_DIR}/my-agent-report.md"
+LOG_FILE="${LOGS_DIR}/my-agent-$(date '+%Y-%m-%d').log"
 
-AGENT_NAME="my-agent"
-REPORT_FILE="docs/agents/${AGENT_NAME}-report.md"
+preflight_claude
+log_info "=== My Agent starting ==="
 
-# ── 1. Read shared context from other agents ──
-SHARED_CONTEXT=""
-if [ -f "$PROJECT_ROOT/docs/agents/shared-context.md" ]; then
-  SHARED_CONTEXT=$(cat "$PROJECT_ROOT/docs/agents/shared-context.md")
-fi
+SHARED_CONTEXT=$(read_shared_context "${AGENT_KEY}")
 
-# ── 2. Build the prompt ──
-PROMPT="You are the $AGENT_NAME scheduled agent for this project.
-
-Your responsibilities:
+PROMPT="You are the my-agent scheduled agent for this project.
 [Define agent-specific responsibilities here]
 
 ## Context from Other Agents
-$SHARED_CONTEXT
+${SHARED_CONTEXT}
 
-After completing your analysis, append a SHARED_CONTEXT block to docs/agents/shared-context.md with your key findings and any cross-agent recommendations."
+Write your report. Include a shared context block:
+SHARED_CONTEXT_START
+## My Agent -- $(date '+%Y-%m-%d')
+- **Status**: GREEN / YELLOW / RED
+- Key findings
+SHARED_CONTEXT_END"
 
-# ── 3. Run Copilot CLI in headless mode ──
-cd "$PROJECT_ROOT"
-echo "[$(date)] Starting $AGENT_NAME agent..."
+cd "${PROJECT_DIR}"
+"${CLAUDE_BIN}" -p "${PROMPT}" \
+  --allowedTools "Read,Glob,Grep,Bash(npm run *),Bash(pnpm run *)" \
+  --output-format text \
+  > "${REPORT_FILE}" 2>>"${LOG_FILE}" || {
+    log_error "CLI execution failed. Check ${LOG_FILE}"
+    exit 1
+  }
 
-copilot -p "$PROMPT" \
-  > "$REPORT_FILE" 2>&1
-
-echo "[$(date)] $AGENT_NAME complete. Report: $REPORT_FILE"
+log_info "Report written to ${REPORT_FILE}"
+extract_and_write_shared_context "${AGENT_KEY}" "${REPORT_FILE}"
+log_info "=== My Agent complete ==="
 ```
 
 ### Key Design Choices
 
-- **`set -euo pipefail`** — Fail fast on errors. Don't silently continue if the CLI crashes.
-- **Shared context** — Agents read other agents' findings before starting, building on each other's intelligence.
-- **`copilot -p`** — The Copilot CLI's headless mode. Unlike the interactive VS Code chat, this runs in a terminal with full tool access.
+- **`agent-utils.sh`** -- Shared utilities handle environment setup (fd limits, PATH, launchd compatibility), logging, shared context read/write/prune, and CLI preflight checks.
+- **`# SCHEDULE:` comment** -- Declares the agent's schedule. `install-agents.sh` reads this to auto-generate launchd plists. Supports `daily HH:MM` and `weekly DAY HH:MM`.
+- **`preflight_claude`** -- Verifies the CLI binary exists and auth works before attempting the main task. Fails fast with a clear error message.
+- **Shared context** -- Agents read other agents' findings before starting (via `read_shared_context`), building on each other's intelligence. After finishing, `extract_and_write_shared_context` appends their findings.
+- **`SHARED_CONTEXT_START` / `SHARED_CONTEXT_END`** -- Delimiters in the prompt that the agent's output must include. `extract_and_write_shared_context` parses this block and appends it to `shared-context.md`.
 
 ## Scheduling
 
-### macOS (launchd)
+### macOS (launchd) -- Plist Reference
+
+The following plist template is provided for reference. In practice, use `install-agents.sh` (see Automated Installation below) to generate these automatically.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -124,12 +156,24 @@ echo "[$(date)] $AGENT_NAME complete. Report: $REPORT_FILE"
 </plist>
 ```
 
+### macOS (launchd) -- Automated Installation
+
+The `install-agents.sh` script (in `templates/scripts/agents/`) auto-discovers agent scripts and generates launchd plists. It reads the `# SCHEDULE:` comment from each script.
+
+```bash
+bash scripts/agents/install-agents.sh            # Install all agents
+bash scripts/agents/install-agents.sh --status    # Check status
+bash scripts/agents/install-agents.sh --unload    # Uninstall all
+```
+
+### macOS (launchd) -- Manual Installation (Fallback)
+
 ```bash
 # Install:
 cp com.project.agent.my-agent.plist ~/Library/LaunchAgents/
 launchctl load ~/Library/LaunchAgents/com.project.agent.my-agent.plist
 
-# Test (don't rely on terminal execution — it masks launchd issues):
+# Test (don't rely on terminal execution -- it masks launchd issues):
 launchctl start com.project.agent.my-agent
 
 # Uninstall:
@@ -138,9 +182,9 @@ launchctl unload ~/Library/LaunchAgents/com.project.agent.my-agent.plist
 
 #### macOS launchd Gotchas
 
-launchd provides a minimal execution environment that breaks CLI tools in several ways. All fixes must be applied together — any single missing fix causes silent failure. See [Error #18](../patterns/agent-errors.md#error-18-agent-cli-crashes-with-unexpected-when-plist-runs-script-directly) for full details.
+launchd provides a minimal execution environment that breaks CLI tools in several ways. All fixes must be applied together -- any single missing fix causes silent failure. See [Error #18](../patterns/agent-errors.md#error-18-agent-cli-crashes-with-unexpected-when-plist-runs-script-directly) for full details.
 
-**1. File descriptor limit (hard cap 256).** launchd sets a hard limit of 256 open files. Many CLI tools need far more for Node.js runtimes and network connections. `ulimit -n` in the script cannot raise above the hard limit — the fix must be in the plist via `HardResourceLimits` and `SoftResourceLimits` (shown in the plist template above).
+**1. File descriptor limit (hard cap 256).** launchd sets a hard limit of 256 open files. Many CLI tools need far more for Node.js runtimes and network connections. `ulimit -n` in the script cannot raise above the hard limit -- the fix must be in the plist via `HardResourceLimits` and `SoftResourceLimits` (shown in the plist template above).
 
 **2. Missing environment variables.** launchd doesn't source shell profiles (`~/.zshrc`, `~/.bash_profile`). PATH is minimal (`/usr/bin:/bin:/usr/sbin:/sbin`), HOME may be unset, TERM is absent. The fix is `EnvironmentVariables` in the plist (shown above), supplemented by fallback exports in the script.
 
@@ -148,7 +192,7 @@ launchd provides a minimal execution environment that breaks CLI tools in severa
 
 **4. ProgramArguments must use `/bin/bash -c exec`.** When launchd directly executes a script located inside a project directory (via shebang), the CLI may crash with unexpected errors. The fix is to use `/bin/bash -c "exec /bin/bash /path/to/script.sh"` in ProgramArguments (shown in the plist template above). This changes the process context so the CLI doesn't misidentify the project root from the initial process arguments.
 
-**Testing:** Always test with `launchctl start <label>`, never by running the script from a terminal. Terminal execution has full env vars, high fd limits, and interactive auth — it masks all four problems.
+**Testing:** Always test with `launchctl start <label>`, never by running the script from a terminal. Terminal execution has full env vars, high fd limits, and interactive auth -- it masks all four problems.
 
 ### Linux (cron)
 
@@ -200,14 +244,14 @@ PROMPT="You are the security-audit scheduled agent.
 Perform these checks:
 1. Run: pnpm audit --json 2>&1 (or npm audit / pip audit)
 2. Search for hardcoded secrets: grep for API keys, tokens, passwords in source files
-3. Check .env.example against actual env var usage — flag undocumented vars
+3. Check .env.example against actual env var usage -- flag undocumented vars
 4. Check for injection vectors: unsanitized user input in SQL, shell commands, HTML
 5. Verify CORS configuration if applicable
 
 Write your report to docs/agents/security-audit-report.md with sections:
 - Summary (1 line: GREEN/YELLOW/RED + critical count)
 - Dependency Vulnerabilities (severity, package, recommendation)
-- Hardcoded Secrets (file:line — DO NOT include the actual secret)
+- Hardcoded Secrets (file:line -- DO NOT include the actual secret)
 - Injection Risks (file:line + type)
 - Configuration Issues
 
@@ -320,14 +364,14 @@ Don't run multiple agents at the same time. If they write to the same shared con
 
 The shared context file (`docs/agents/shared-context.md`) is a cross-agent intelligence workspace. Every scheduled agent:
 
-1. **Reads** it before starting — to build on other agents' findings
-2. **Writes** to it after finishing — to share discoveries
+1. **Reads** it before starting -- to build on other agents' findings
+2. **Writes** to it after finishing -- to share discoveries
 
 ### Format
 
 ```markdown
 <!-- ENTRY:START agent=agent-name timestamp=2024-01-15T06:00:00Z -->
-## Agent Name — 2024-01-15
+## Agent Name -- 2024-01-15
 - **Status**: GREEN / YELLOW / RED
 - Key findings (bullet points)
 - Metrics (numbers, percentages)
@@ -341,26 +385,27 @@ The shared context file (`docs/agents/shared-context.md`) is a cross-agent intel
 
 1. **Maximum 3 entries per agent type.** Oldest entry is removed when a new one is added.
 2. **Cross-agent recommendations are mandatory.** If findings affect another agent's domain, say so explicitly.
-3. **Be specific.** "Security looks fine" is useless. "No injection vectors found — all user input escaped via `sanitize()`" is useful.
+3. **Be specific.** "Security looks fine" is useless. "No injection vectors found -- all user input escaped via `sanitize()`" is useful.
 
 ## Morning Triage
 
 After scheduled agents finish their overnight runs, use `/triage` to process all reports:
 
-1. Discovers every new/modified report in `docs/agents/` exhaustively
+1. Discovers new reports via `.last-triage` marker timestamps (not git status)
 2. Checks `logs/` for agent failures (a missing report might mean a crashed agent)
 3. Reads all reports and shared-context.md
 4. Synthesizes findings and drafts an action plan
-5. Implements all fixes (fix everything — Rule #31)
-6. Commits reports for historical record, then code fixes separately
-7. Updates shared-context.md with triage results
+5. Implements all fixes (fix everything -- Rule #31)
+6. Commits only code fixes (reports are never committed -- they stay on disk)
+7. Touches `.last-triage` marker to record which reports have been processed
+8. Updates shared-context.md with triage results
 
 For multi-project orchestration, the `morning-triage.sh` script template (in `templates/scripts/`) runs `/triage` across all configured projects sequentially, producing a cross-project summary.
 
 ## Prerequisites
 
 - Copilot CLI installed and authenticated (`copilot --version`)
-- Non-interactive auth configured: run `copilot auth` from an interactive terminal (required for launchd/cron — interactive auth flows won't work without a browser/TTY)
+- Non-interactive auth configured: run `copilot auth` from an interactive terminal (required for launchd/cron -- interactive auth flows won't work without a browser/TTY)
 - macOS launchd: plist must include `HardResourceLimits`/`SoftResourceLimits` with `NumberOfFiles: 122880`, `EnvironmentVariables` with HOME, TERM, PATH, and `ProgramArguments` must use `/bin/bash -c "exec /bin/bash <script>"` format (see plist template above and [Error #18](../patterns/agent-errors.md#error-18-agent-cli-crashes-with-unexpected-when-plist-runs-script-directly))
 - Project dependencies installed (agents may run test/build commands)
 - `docs/agents/` directory exists in the project

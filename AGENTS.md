@@ -89,7 +89,10 @@ copilot-rpi/
     │   └── update-docs.prompt.md     # /update-docs — comprehensive docs refresh
     ├── scripts/                      # Agent shell script templates
     │   ├── copilot-rpi-update-agent.sh  # Nightly blueprint sync agent
-    │   └── morning-triage.sh            # Multi-project morning triage
+    │   ├── morning-triage.sh            # Multi-project morning triage
+    │   └── agents/                      # Per-project agent infrastructure
+    │       ├── install-agents.sh        # Automated launchd installer
+    │       └── lib/agent-utils.sh       # Shared agent utility library
     └── github/                       # Copilot-specific templates
         ├── copilot-instructions.md.template
         ├── instructions/             # Path-specific rule templates

@@ -131,18 +131,33 @@ Each file must have `applyTo` in YAML frontmatter — without it, the file is si
 - [ ] Create `scripts/agents/` directory for agent shell scripts
 - [ ] Create `docs/agents/` directory for agent reports and shared context
 - [ ] Create `logs/` directory for agent output capture
-- [ ] **Set up the `/update` agent first** — keeps your project in sync with copilot-rpi improvements:
+- [ ] Add gitignore entries for agent operational output:
+
+  ```gitignore
+  # Agent operational output (never committed)
+  docs/agents/
+  logs/
+  scripts/agents/
+  ```
+
+- [ ] Copy shared utilities:
+  - `templates/scripts/agents/lib/agent-utils.sh` to `scripts/agents/lib/agent-utils.sh`
+  - `templates/scripts/agents/install-agents.sh` to `scripts/agents/install-agents.sh`
+- [ ] **Set up the `/update` agent first** -- keeps your project in sync with copilot-rpi improvements:
   1. Copy `templates/scripts/copilot-rpi-update-agent.sh` to `scripts/agents/copilot-rpi-update.sh`
   2. Set `COPILOT_RPI_PATH` to your copilot-rpi clone location
   3. Make executable: `chmod +x scripts/agents/copilot-rpi-update.sh`
-  4. Create required directories: `mkdir -p docs/agents logs`
-  5. Schedule with launchd or cron (examples are in the script comments)
-- [ ] Write additional agent scripts (e.g., test-health, security-audit)
-- [ ] Ensure Copilot CLI is authenticated (`copilot auth`)
-- [ ] For macOS launchd: ensure plist has resource limits, env vars, and `/bin/bash -c exec` wrapper in ProgramArguments (see [scheduled-agents.md](../methodology/scheduled-agents.md) for plist template and gotchas)
-- [ ] Schedule with launchd (macOS) or cron (Linux)
-- [ ] Test with `launchctl start` (macOS) — don't test from a terminal, it masks launchd issues
-- [ ] Verify the agent runs successfully and produces a report
+  4. Create required directories: `mkdir -p docs/agents logs scripts/agents/lib`
+  5. Add `# SCHEDULE: daily HH:MM` comment to the script (read by `install-agents.sh`)
+  6. Install with `bash scripts/agents/install-agents.sh`
+- [ ] Write additional agent scripts using the template in [scheduled-agents.md](../methodology/scheduled-agents.md):
+  - Source `agent-utils.sh` for environment setup, logging, and shared context
+  - Add `# SCHEDULE:` comment (`daily HH:MM` or `weekly DAY HH:MM`)
+  - Use `preflight_claude`, `read_shared_context`, `extract_and_write_shared_context`
+- [ ] Ensure CLI is authenticated for non-interactive use (`claude setup-token` or `copilot auth`)
+- [ ] Install all agents: `bash scripts/agents/install-agents.sh`
+- [ ] Test with `launchctl start` (macOS) -- don't test from a terminal, it masks launchd issues
+- [ ] Verify with `bash scripts/agents/install-agents.sh --status`
 
 ## Workflow Habits
 

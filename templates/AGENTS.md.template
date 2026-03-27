@@ -19,10 +19,10 @@ Test: "Would removing this line cause the agent to make mistakes?" If not, cut i
 
 This project follows the Research-Plan-Implement (RPI) pattern.
 All significant changes go through four phases:
-1. /research — Understand the codebase as-is
-2. /plan — Create a phased implementation spec
-3. /implement — Execute one phase at a time with review gates
-4. /validate — Verify implementation against the plan
+1. /research -- Understand the codebase as-is
+2. /plan -- Create a phased implementation spec
+3. /implement -- Execute one phase at a time with review gates
+4. /validate -- Verify implementation against the plan
 
 ### Context Management
 
@@ -35,13 +35,13 @@ All significant changes go through four phases:
 ### Rules for All Phases
 
 - Read all mentioned files COMPLETELY before doing anything else.
-- Never suggest improvements during research — only document what exists.
+- Never suggest improvements during research -- only document what exists.
 - Every code reference must include file:line.
 - Never write documents with placeholder values.
 
 ### Rules for Implementation
 
-- Follow the atomic loop: implement → self-review → fix → verify → report.
+- Follow the atomic loop: implement -> self-review -> fix -> verify -> report.
 - **Two-pass review:** Self-review checks plan compliance ("did I follow the plan?"). After self-review passes, recommend `/quality-review` for code reuse, quality, and efficiency ("is the code good?"). These are separate concerns.
 - Run ALL automated verification after each phase.
 - STOP after each phase and wait for human confirmation.
@@ -63,7 +63,7 @@ All significant changes go through four phases:
 - Prefer automated verification over manual testing.
 - Manual testing is ONLY for: sudo, hardware, new installs, truly visual-only validation.
 - If you can verify it with a command or tool, do so automatically.
-- Don't use the agent for linting/formatting — use automated tools and hooks instead.
+- Don't use the agent for linting/formatting -- use automated tools and hooks instead.
 
 ## Key Commands
 
@@ -76,20 +76,16 @@ pnpm run dev            # Local dev server
 pnpm run build          # Production build
 ```
 
-### CRITICAL: Run verification commands before committing
-Always run typecheck and lint before attempting `git commit`.
-Chain with `;`: `pnpm run typecheck 2>&1; pnpm run lint 2>&1`
-
 ## Git Workflow
 
 **`develop` is the default branch. `main` is production only.**
 
 1. All development happens on `develop`
 2. Never commit directly to `main`
-3. Release to production via PR: `develop` → `main`
+3. Release to production via PR: `develop` -> `main`
 4. Always run checks before committing (pre-commit hooks enforce this)
-5. Always commit before pulling — `git pull --rebase` requires a clean working tree
-6. **Before any commit, verify the current branch** — run `git branch --show-current` and confirm it matches your intent. If the user hasn't specified a branch, ask.
+5. Always commit before pulling -- `git pull --rebase` requires a clean working tree
+6. **Before any commit, verify the current branch** -- run `git branch --show-current` and confirm it matches your intent. If the user hasn't specified a branch, ask.
 7. After config, dependency, or infrastructure changes, **immediately run the full test suite** before proceeding to the next task
 
 ### Commit Messages
@@ -105,7 +101,7 @@ docs: description
 ```
 
 ## Deployment
-[Describe your deployment pipeline — which branch deploys where]
+[Describe your deployment pipeline -- which branch deploys where]
 
 ### Deployment Safety
 
@@ -117,7 +113,7 @@ When merging PRs, handling dependency updates, or deploying:
 - **Framework upgrades require staging/preview verification.** CI passing is NOT sufficient. Deploy to a staging environment and verify before merging to production.
 - **When production is down:** Roll back immediately. Investigate on non-production. Fix forward on `develop`. Never deploy to diagnose. Never promote broken deployments "briefly."
 - **Batch dependency updates** into a single branch and PR. Never merge N PRs one-by-one (causes O(n^2) CI waste from rebase cascades).
-- **Justify every external action** — before any CI run, deployment, or API call: Is this needed? Is this justified? Is this verifiable? If any answer is "no," stop.
+- **Justify every external action** -- before any CI run, deployment, or API call: Is this needed? Is this justified? Is this verifiable? If any answer is "no," stop.
 
 ### Supabase Migration Rules
 
@@ -128,7 +124,7 @@ When writing Supabase migrations or creating tables:
   GRANT SELECT ON table_name TO anon, authenticated;
   ```
 - **Add `ALTER DEFAULT PRIVILEGES` in the initial setup migration** so all future tables automatically get anon SELECT. Never rely on Supabase dashboard-granted defaults for migration-created tables.
-- **Fallback data paths must log at ERROR level.** If a query fails and the code falls back to default/placeholder data, log `[TABLE_FALLBACK]` at ERROR — not INFO. Silent fallbacks hide permission bugs for days.
+- **Fallback data paths must log at ERROR level.** If a query fails and the code falls back to default/placeholder data, log `[TABLE_FALLBACK]` at ERROR -- not INFO. Silent fallbacks hide permission bugs for days.
 - **Health endpoints must check actual data access**, not just connectivity. Return `"degraded"` if primary tables are inaccessible.
 
 ### Supabase Migration Safety
@@ -149,88 +145,79 @@ docker exec supabase_db_<project> psql -U postgres -c "<verification query>"
 supabase db push
 ```
 
-- The local instance is a full Postgres with RLS, extensions, and auth — treat it as your UAT environment.
+- The local instance is a full Postgres with RLS, extensions, and auth -- treat it as your UAT environment.
 - If `supabase start` fails, check that Docker Desktop is running.
 - The container name follows the pattern `supabase_db_<project>` where `<project>` is the Supabase project name from `supabase/config.toml`.
 - Never push a migration to remote without testing it locally first.
 
-## Agent Operational Rules
+## Working Patterns
 
-### Git Recipes (use these exact sequences)
+<examples>
+<example name="push-sequence">
+Commit before pulling -- rebase fails with a dirty working tree.
+
 ```bash
-# Push sequence — ALWAYS commit before pulling (Error #19)
-git add <files> && git commit -m "msg" && git pull --rebase && git push
-
-# First push — set upstream tracking
-git add <files> && git commit -m "msg" && git push -u origin <branch>
-
-# Push with tag — NEVER use --tags (Error #20)
-git push origin main && git push origin v1.0.0
-# Or: git push origin main --follow-tags
-
-# Worktree cleanup
-git worktree remove --force <path>; git branch -D <branch>
+git add src/feature.ts && git commit -m "feat: add feature"
+git pull --rebase && git push
 ```
 
-### Git Operations
-- Run typecheck/lint BEFORE committing (pre-commit hooks run the same checks)
-- Remove worktrees BEFORE merging PRs with `--delete-branch`
-- Never fabricate filesystem paths — use the working directory or discover with `ls`
+</example>
 
-### Parallel Agent Rules
-- **Designate one agent or process as the git committer.** Parallel agents (`copilot -p`, `@copilot` cloud agents) write changes to their working directories. The lead agent reviews the changes, runs tests, and commits centrally. This prevents wrong-branch pushes and merge conflicts.
-- Exception: `@copilot` cloud agents and fan-out units that create isolated branches with their own PRs can commit safely.
+<example name="verification">
+Run checks sequentially before committing.
 
-### GitHub CLI
-- Don't guess `gh --json` field names — query available fields first
-- Check CI per-PR with `--json`, not chained human-readable output
-- `review: fail` means "needs approval", NOT a CI failure
+```bash
+pnpm run typecheck 2>&1; pnpm run lint 2>&1; pnpm run test 2>&1
+```
+
+</example>
+
+<example name="worktree-cleanup">
+Remove worktrees before merging PRs. Use -D (uppercase) for branches.
+
+```bash
+git worktree remove --force ../feature-branch; git branch -D feature-branch
+```
+
+</example>
+
+<example name="file-paths">
+Use absolute paths in worktree commands. Discover paths with ls, never fabricate.
+</example>
+</examples>
+
+Domain-specific rules (git, CI, deployment, GitHub CLI, multi-agent) are loaded via `.github/instructions/` when relevant. Full rule catalog: `patterns/quick-reference.md`.
 
 ## Push Accountability
 
-Every push to the development branch requires CI verification. After pushing:
-1. Verify CI status: `gh run list --branch develop --limit 1`
-2. If CI passes — log and move on
-3. If CI fails — investigate with `gh run view <id> --log-failed`, fix, and re-push
-4. Never push to production from a background fix
+After pushing, verify CI: `gh run list --branch develop --limit 1`. If CI fails, investigate with `gh run view <id> --log-failed`, fix, and re-push. The push isn't done until CI is green.
 
 ## TDD Protocol
 
 All code changes follow Red-Green-Refactor:
-1. **Red** — Write a failing test FIRST
-2. **Green** — Minimum code to pass
-3. **Refactor** — Clean up with green tests
+1. **Red** -- Write a failing test FIRST
+2. **Green** -- Minimum code to pass
+3. **Refactor** -- Clean up with green tests
 
 No exceptions. Bug fixes need a regression test. Refactors need existing coverage. No "tests later."
 
 ## Agent Autonomy
 
-Before asking the user to do anything manually:
-1. Exhaust CLI tools (`gh`, `git`, project CLIs)
-2. Exhaust terminal commands (curl, build scripts)
-3. Exhaust file operations (read/edit/write for config changes)
-4. Only then ask for human help — with a clear explanation of what you tried
-
-Autonomy applies to development work. Production-affecting actions always need explicit human authorization.
+Exhaust CLI tools, terminal commands, and file operations before asking the user. Only escalate when genuinely impossible. Production-affecting actions need explicit human authorization.
 
 ## Memory Management
 
-Project memory lives at `docs/agents/project-memory.md`. This file persists operational knowledge across sessions.
-
-- **Read it** at the start of every session — it contains project identity, setup decisions, and hard-won lessons.
-- **Write to it** whenever you discover something non-obvious: CI quirks, environment gotchas, workarounds, tool behaviors, failed approaches worth avoiding.
-- Don't wait to be asked — proactively append new lessons to the `## Operational Lessons` section.
-- Keep entries concise: one line per lesson, with `file:line` references where relevant.
+Project memory lives at `docs/agents/project-memory.md`. Read it at session start. Write operational lessons immediately -- CI quirks, environment gotchas, workarounds. Don't wait to be asked.
 
 ## Project File Locations
 
-Go directly to these paths — never search the codebase for them.
+Go directly to these paths -- never search the codebase for them.
 
 | Topic | Path | Notes |
 |-------|------|-------|
-| Agent reports | `docs/agents/*-report.md` | Flag YELLOW/RED items. Cross-agent context in `shared-context.md` |
-| Agent logs | `logs/<name>.log`, `<name>.error.log` | Read alongside reports to diagnose failures |
-| Agent scripts | `scripts/agents/` | Standalone bash files invoking Claude CLI headless |
+| Agent reports | `docs/agents/*-report.md` | Gitignored. Local-only operational history. Never committed |
+| Agent logs | `logs/<name>.log`, `<name>.error.log` | Gitignored. Read alongside reports to diagnose failures |
+| Agent scripts | `scripts/agents/` | Gitignored. Standalone bash files invoking CLI headless |
 | Project memory | `docs/agents/project-memory.md` | Read at session start, append operational lessons |
 | ADRs | `docs/decisions/` | Architecture decision records |
 | Research docs | `docs/research/YYYY-MM-DD-description.md` | |

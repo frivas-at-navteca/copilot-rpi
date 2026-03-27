@@ -1,112 +1,121 @@
-# Agent Operational Rules — Quick Reference
+# Agent Operational Rules -- Quick Reference
 
-These rules must be internalized before starting any work. They prevent the most common recurring errors across all projects.
+Scope: `[universal]` `[frequent]` `[situational]` `[rare]`
+Stack: `[node]` `[python]` `[macos]` `[github]` (omitted = all stacks)
 
-## Git Rules
+## Shell & Tools
 
-1. **Always run typecheck/lint BEFORE committing** — pre-commit hooks run the same checks. Fix errors first, then commit. Don't discover failures at commit time.
+1. **Run typecheck/lint before committing** `[universal]` -- pre-commit hooks run the same checks. Fix first, commit second.
 
-2. **Always `git pull --rebase` before pushing** — remote may have advanced from other sessions, merged PRs, or parallel agents.
+2. **Exhaust all tools before suggesting manual steps** `[universal]` -- check CLI tools, shell commands, MCP servers, file tools before escalating to the user.
 
-3. **Remove worktrees BEFORE merging PRs with `--delete-branch`** — Git can't delete a branch checked out in a worktree.
+3. **Don't fabricate filesystem paths** `[universal]` -- the agent invents plausible names (`Projects`, `repos`). Use the working directory or discover with `ls`/Glob.
 
-4. **Always `git worktree remove --force`** — worktrees have build artifacts/node_modules. Use `;` not `&&` for multiple removals. Apply fixes to ALL instances in a chain, not just the first.
+4. **Save curl output before parsing** `[universal]` -- `curl | jq` crashes with unhelpful errors when the API returns HTML or auth failures. Save response first and check HTTP status, or use `curl -sf`.
 
-5. **Always `git branch -D` (uppercase) for worktree branches** — worktree branches are almost never "fully merged" in git's view (squash merges, deleted remotes, abandoned work). Full cleanup idiom: `git worktree remove --force <path>; git branch -D <branch>`
+## Git
 
-6. **Commit or stash before `git pull --rebase`** — `git pull --rebase` requires a clean working tree. Always commit your changes first. The push recipe is: `git add <files> && git commit -m "msg" && git pull --rebase && git push`. This is the single most-repeated agent error.
+5. **Pull before push** `[universal]` -- remote may have advanced from other sessions or parallel agents.
 
-7. **Use `git push origin <tag>` instead of `--tags`** — `--tags` pushes ALL local tags. If any old tag already exists on the remote, git exits non-zero even though commits and new tags pushed fine. Push specific tags by name, or use `--follow-tags`.
+6. **Remove worktrees before merging PRs with `--delete-branch`** `[frequent]` -- Git can't delete a branch checked out in a worktree.
 
-8. **Don't fabricate filesystem paths — use the working directory or discover with `ls`** — the agent invents plausible directory names (`Projects`, `GenAI_Projects`, `repos`) that don't exist. Use the environment's working directory for the current project, and `ls` or file search to discover paths for other projects.
+7. **Force-remove worktrees** `[frequent]` -- worktrees have build artifacts/node_modules. Use `git worktree remove --force` with `;` not `&&` for multiple removals.
 
-## GitHub CLI Rules
+8. **Use `git branch -D` (uppercase) for worktree branches** `[frequent]` -- squash merges and deleted remotes make `-d` fail with "not fully merged." Full cleanup: `git worktree remove --force <path>; git branch -D <branch>`.
 
-1. **Don't guess `gh` CLI `--json` field names** — fields differ per subcommand. Run `gh <cmd> --json 2>&1 | head -5` first if unsure. `conclusion` exists on `gh run` but NOT `gh pr checks`.
+9. **Commit or stash before `git pull --rebase`** `[universal]` -- fails with a dirty working tree. Push recipe: `git add <files> && git commit -m "msg" && git pull --rebase && git push`. Single most-repeated agent error.
 
-2. **Check CI per-PR with `--json`, not chained human-readable output** — jumbled output is unreadable. `review: fail` means "needs approval", NOT a CI failure — always filter it out.
+10. **Push specific tags, not `--tags`** `[universal]` -- `--tags` pushes ALL local tags. If any old tag exists on remote, git exits non-zero. Use `git push origin <tag>` or `--follow-tags`.
 
-3. **Don't assume GitHub labels exist — check or create first** — `gh issue create --label "chore"` fails if the label doesn't exist on the repo. Run `gh label list` first, or create needed labels with `gh label create`.
+11. **Verify current branch before committing** `[universal]` -- run `git branch --show-current` before `git commit`. Don't assume from conversation context.
 
-## Node.js / TypeScript Rules
+## GitHub CLI
 
-1. **Always pass `{ encoding: 'utf-8' }` to `execSync`/`spawnSync`** — they return Buffers by default. `.trim()` and other string methods fail on Buffer.
+12. **Don't guess `gh --json` field names** `[universal]` `[github]` -- fields differ per subcommand. Run `gh <cmd> --json 2>&1 | head -5` first. `conclusion` exists on `gh run` but not `gh pr checks`.
 
-2. **Don't run ESM CLI tools with `node <file>`** — shebang + ESM = SyntaxError. Use `chmod +x && ./<file>` or `npx .` instead.
+13. **Check CI per-PR with `--json`** `[universal]` `[github]` -- jumbled human-readable output is unreadable. `review: fail` means "needs approval", not CI failure -- filter it out.
 
-## CI & Workflow Rules
+14. **Don't assume GitHub labels exist** `[frequent]` `[github]` -- `gh issue create --label "chore"` fails if the label doesn't exist. Run `gh label list` first, or `gh label create`.
 
-1. **Never push and forget** — after every push to the development branch, verify CI passes. If CI fails, investigate, fix, and re-push. The push isn't done until CI is green.
+15. **Check for existing PRs before `gh pr create`** `[frequent]` `[github]` -- fails if a PR already exists for the branch pair. Check with `gh pr list --head <branch>` first; use `gh pr edit` to update.
 
-2. **Always write tests before implementation (TDD)** — Red-Green-Refactor, every time. Bug fixes need a regression test first. No "tests later." Tests written after implementation tend to be tautological.
+## CI & Verification
 
-3. **Exhaust all tools before suggesting manual steps** — before telling the user "go to the dashboard and...", check if you can use CLI tools, shell commands, MCP servers, or terminal commands to do it yourself. Only escalate when genuinely impossible.
+16. **Verify CI after every push** `[universal]` -- if CI fails, investigate and re-push. The push is not done until CI is green.
 
-## Copilot-Specific Rules
+17. **Write tests before implementation (TDD)** `[universal]` -- Red-Green-Refactor. Bug fixes need a regression test first.
 
-1. **Always include YAML frontmatter in `.prompt.md` files** — prompt files without frontmatter won't appear in the `/` command menu. At minimum include `mode: agent` (or `mode: ask` for read-only prompts). The `description` field is required for discoverability.
+18. **Run full test suite after config changes** `[universal]` -- config changes (tsconfig, eslint, package.json, .env, CI workflows) have broader blast radius than code changes. Run typecheck + lint + test immediately.
 
-2. **Use `${input:variableName}` for prompt parameters, not `$ARGUMENTS`** — Copilot prompt files use `${input:varName}` syntax for user input. The `$ARGUMENTS` pattern is Claude Code-specific and won't work.
+19. **Run scaffolding tools before adding config files** `[situational]` `[node]` -- `create-next-app`, `create-vite`, etc. require an empty directory. Creating AGENTS.md first causes the scaffolder to abort.
 
-3. **Path-specific instruction files need `applyTo` in frontmatter** — `.github/instructions/*.instructions.md` files are ignored if they lack the `applyTo` glob pattern in their YAML frontmatter. No `applyTo` = never loaded.
+## Copilot-Specific
 
-4. **Authenticate the Copilot CLI before using it in cron/launchd** — `copilot -p` in headless mode requires pre-authenticated credentials. Run `copilot auth` interactively first, then verify from a non-interactive shell.
+20. **Include YAML frontmatter in `.prompt.md` files** `[universal]` -- prompt files without frontmatter won't appear in the `/` command menu. At minimum include `mode: agent` (or `mode: ask` for read-only prompts). The `description` field is required for discoverability.
 
-5. **Proactive compaction before auto-compaction** — Copilot auto-compacts at ~95% context usage, but quality degrades well before that. Write a handoff document and start a new Chat window at ~60% usage for best results.
+21. **Use `${input:variableName}` for prompt parameters, not `$ARGUMENTS`** `[universal]` -- Copilot prompt files use `${input:varName}` syntax. The `$ARGUMENTS` pattern is Claude Code-specific and won't work.
 
-6. **Chat mode files must be in `.github/chatmodes/`** — placing them anywhere else (e.g., `.github/prompts/` or project root) means they won't appear as selectable chat modes in VS Code.
+22. **Path-specific instruction files need `applyTo` in frontmatter** `[frequent]` -- `.github/instructions/*.instructions.md` files are ignored if they lack the `applyTo` glob pattern. No `applyTo` = never loaded.
 
-## Branch & Multi-Agent Rules
+23. **Authenticate the Copilot CLI before using it in cron/launchd** `[situational]` `[macos]` -- `copilot -p` in headless mode requires pre-authenticated credentials. Run `copilot auth` interactively first, then verify from a non-interactive shell.
 
-1. **Always verify the current branch before committing** — run `git branch --show-current` before any `git commit`. Don't assume the branch from conversation context — git state may have changed. If the user hasn't specified a branch, ask.
+24. **Proactive compaction before auto-compaction** `[universal]` -- Copilot auto-compacts at ~95% context usage, but quality degrades well before that. Write a handoff document and start a new Chat window at ~60% usage.
 
-2. **Designate one agent or process as the git committer** — parallel agents write changes to their working directories. The committing agent reviews all changes, runs tests, and commits centrally. This prevents wrong-branch pushes and merge conflicts from parallel agents.
+25. **Chat mode files must be in `.github/chatmodes/`** `[universal]` -- placing them anywhere else (e.g., `.github/prompts/` or project root) means they won't appear as selectable chat modes in VS Code.
 
-3. **Run the full test suite after config or infrastructure changes** — config changes (tsconfig, eslint, package.json, .env, migrations, CI workflows) have broader blast radius than code changes. A single tsconfig modification can break hundreds of files. Always run `typecheck; lint; test` immediately after config changes, before proceeding.
+## Node.js / TypeScript
 
-4. **Run project scaffolding tools BEFORE adding config files** — `create-next-app`, `create-vite`, etc. require an empty directory. Creating AGENTS.md or `.github/` first causes the scaffolder to abort. Scaffold first, configure second.
+26. **Pass `{ encoding: 'utf-8' }` to `execSync`/`spawnSync`** `[frequent]` `[node]` -- they return Buffers by default. `.trim()` and other string methods fail on Buffer.
 
-5. **Never pipe `curl` directly to a JSON parser** — `curl | jq` or `curl | python3 json.load()` crashes with unhelpful parse errors when the API returns non-JSON (HTML error pages, auth failures, rate limits). Save the response first and check HTTP status, or use `curl -sf` to fail on errors.
+27. **Don't run ESM CLI tools with `node <file>`** `[situational]` `[node]` -- shebang + ESM = SyntaxError. Use `chmod +x && ./<file>` or `npx .`.
 
-6. **Only the main agent pushes — worktree agents commit locally** — when N agents work in parallel worktrees, each independent push triggers N x M CI runs (branches x workflows). Agents commit locally, main agent batch-pushes all branches in one command (`git push origin branch-1 branch-2 ...`), creates all PRs, and monitors CI centrally. Saves runner minutes (especially 10x macOS) and eliminates wrong-branch pushes.
+## Multi-Agent
 
-7. **Check for existing PRs before `gh pr create`** — `gh pr create` fails if a PR already exists for the head-to-base branch pair. Check with `gh pr list --head <branch> --base <base>` first; if one exists, use `gh pr edit` to update it instead.
+28. **Designate one agent as the git committer** `[universal]` -- sub-agents write changes; the committing agent reviews, tests, and commits centrally. Prevents wrong-branch pushes and merge conflicts.
 
-## Quality & Attitude Rules
+29. **Only the main agent pushes -- worktree agents commit locally** `[universal]` -- N independent pushes trigger N x M CI runs. Agents commit locally, main agent batch-pushes all branches, creates PRs, monitors CI centrally.
 
-1. **Fix everything, always (Rule #31)** — categorize findings by severity (that's useful), but fix 100% of them. With AI agents, the cost of fixing is near-zero. Never suggest deferring items, say "nothing urgent," or recommend leaving low-priority items for a later session. The quality bar is the highest possible.
+## Deployment & Resources
 
-## launchd Rules
+30. **Merging to main IS deploying to production** `[universal]` -- in projects with CI/CD, a merge is a deployment. Dependabot PRs target main by default -- merging them deploys to production.
 
-1. **launchd plist must NOT run project scripts directly** — `<string>/project/scripts/agent.sh</string>` in ProgramArguments causes CLI crashes when the script is inside a project directory. Use `/bin/bash -c "exec /bin/bash <script>"` wrapper instead. Exit code may be 0 despite the error, so preflight checks silently pass.
+31. **Batch dependency updates into a single PR** `[frequent]` -- merging N PRs one-by-one with "require up-to-date" creates O(n^2) CI waste. Create one branch, apply all updates, run CI once.
 
-## Git Conflict Resolution Rules
+32. **Every CI run costs money -- count before triggering** `[universal]` -- estimate runs before starting. If >2-3, find a more efficient approach. Work locally until confident, push once.
 
-1. **`git checkout --` doesn't work on unmerged files — use `--ours`/`--theirs` or abort** — during a merge/rebase/cherry-pick conflict, files are "unmerged" and plain `git checkout -- <file>` fails. Use `git checkout --ours <file>` or `git checkout --theirs <file>` to pick a side, or `git merge --abort` / `git rebase --abort` to cancel entirely. Check `git status` first to see the conflict state.
+33. **Framework upgrades need preview verification** `[frequent]` -- CI passing is necessary but not sufficient. Build != Runtime. Deploy to a preview URL and verify the site loads before merging.
 
-2. **Remove conflicting untracked files before `git merge`** — if untracked files exist at the same paths as files in the branch being merged, git aborts with "untracked working tree files would be overwritten." Delete or move the untracked copies first, then merge. Common in multi-agent workflows where the lead agent and parallel agents create files at the same paths.
+34. **When production is down: roll back first** `[universal]` -- restore service immediately. Investigate on a non-production environment. Fix forward on develop, verify on preview, release to main.
 
-## Deployment & Resource Efficiency Rules
+35. **Justify every external action before triggering** `[universal]` -- before any CI run, deployment, or API call: Is this needed? Is this justified? Is this verifiable? If any answer is "no", stop.
 
-1. **Merging to `main` IS deploying to production** — in any project with CI/CD connected to `main`, a merge is a production deployment. Dependabot PRs target `main` by default — merging them deploys to production. "Clean up PRs" means close/retarget, not merge. Cherry-pick dependency updates to `develop`, close the Dependabot PR, release via the normal process.
+## Supabase
 
-2. **Batch dependency updates into a single PR — never merge sequentially** — merging N PRs one-by-one on a branch with "require up-to-date" protection creates O(n^2) CI waste from rebase cascades. Create a single branch, apply all updates, run CI once.
+36. **Test migrations locally before pushing to remote** `[frequent]` -- run `supabase start` + `supabase db reset` locally, verify with `docker exec ... psql`, then `supabase db push`. The local instance has full Postgres with RLS and extensions -- treat it as UAT.
 
-3. **Every CI run and deployment costs money — count before triggering** — before starting work, estimate how many CI runs and deployments you'll trigger. If the answer is more than 2-3, find a more efficient approach. Never push partial work to branches that trigger CI. Never deploy to diagnose. Work locally until confident, then push once.
+## Quality & Process
 
-4. **Framework upgrades require platform staging verification** — CI passing is necessary but NOT sufficient for framework upgrades (Next.js, React, Django, Rails, etc.). Build != Runtime. Local != Production. Deploy to a staging/preview environment and verify the site loads, API routes respond, and health checks pass before merging to production.
+37. **Fix everything, always** `[universal]` -- categorize by severity, but fix 100%. With AI agents, fix cost is near-zero.
 
-5. **When production is down: roll back first, investigate second** — restore service immediately by rolling back to the last known good deployment. Then investigate on a non-production environment. Fix forward on `develop`, verify on staging, release to `main`. Never promote broken deployments "briefly to capture logs." Never deploy to diagnose.
+## Observability
 
-6. **Justify every external action before triggering** — before any CI run, deployment, or API call, answer: Is this needed? Is this justified? Is this verifiable? If any answer is "no," do not proceed. Track your deployment count during recovery — if you've deployed more than twice without success, stop and re-evaluate.
+38. **Every fallback path must be observable** `[universal]` -- add ERROR-level logging when fallbacks activate, health endpoint coverage for degraded state, and alerting hooks. A silent fallback is a silent production bug.
 
-## Observability Rules
+## launchd
 
-1. **Every fallback path must be observable** — when writing code with fallback behavior (default data, cached responses, placeholder content), always add: (1) ERROR-level logging when the fallback activates, (2) health endpoint coverage that detects degraded state, (3) alerting or monitoring hooks. A silent fallback is a silent production bug. Ask: "If this fallback fires in production, will anyone know?"
+39. **launchd plist must not run project scripts directly** `[rare]` `[macos]` -- `<string>/project/scripts/agent.sh</string>` causes CLI crashes when the script is inside a project directory. Use `/bin/bash -c "exec /bin/bash <script>"` wrapper. Exit code may be 0 despite the error.
 
-## Supabase Rules
+## Git Conflict Resolution
 
-1. **Always test Supabase migrations locally before pushing to remote** — run `supabase start` + `supabase db reset` locally, verify with `docker exec supabase_db_<project> psql -U postgres -c "<query>"`, and only then `supabase db push`. The local instance has full Postgres with RLS, extensions, and auth — treat it as UAT. Never push a migration without local verification.
+40. **Use `--ours`/`--theirs` for unmerged files** `[situational]` -- `git checkout --` fails on unmerged files during merge/rebase conflicts. Use `git checkout --ours <file>` or `--theirs`, or abort entirely. Check `git status` first.
+
+41. **Remove conflicting untracked files before merge** `[situational]` -- untracked files at the same paths as incoming files cause git to abort. Delete or move them first.
+
+## Agent Reports
+
+42. **Never commit agent reports to the repository** `[universal]` -- `docs/agents/`, `logs/`, and `scripts/agents/` are gitignored in all projects. Reports stay on disk as local operational history. Only code fixes are committed.
+
+43. **Use timestamp-based discovery for triage, not git status** `[universal]` -- touch `docs/agents/.last-triage` after each triage run. Next triage discovers new reports with `find docs/agents/ -name "*-report.md" -newer docs/agents/.last-triage`. On first run (no marker), process all reports.
 
 ---
 
