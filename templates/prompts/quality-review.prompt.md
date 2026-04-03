@@ -2,6 +2,8 @@
 mode: agent
 description: "Review changed code for reuse, quality, and efficiency — then fix issues found"
 ---
+Model tier: **sonnet** — invoke this prompt in a Sonnet session.
+
 Review all changed files for code reuse, code quality, and efficiency. Fix any issues found.
 
 ## Phase 1: Identify Changes

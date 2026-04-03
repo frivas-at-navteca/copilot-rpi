@@ -2,6 +2,8 @@
 mode: agent
 description: "Research the codebase to understand what exists before making changes"
 ---
+Model tier: **opus** — invoke this prompt in an Opus session.
+
 Research the codebase to answer: ${input:question}
 
 Process:

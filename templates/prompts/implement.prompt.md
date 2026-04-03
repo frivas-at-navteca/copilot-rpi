@@ -2,6 +2,8 @@
 mode: agent
 description: "Execute an implementation plan phase by phase with verification gates"
 ---
+Model tier: **sonnet** — invoke this prompt in a Sonnet session.
+
 Implement the plan at: ${input:planPath}
 
 Process:

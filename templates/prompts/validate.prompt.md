@@ -2,6 +2,8 @@
 mode: agent
 description: "Verify implementation against the plan and run all success criteria"
 ---
+Model tier: **sonnet** — invoke this prompt in a Sonnet session.
+
 Validate the implementation against the plan.
 
 Process:

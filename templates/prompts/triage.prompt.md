@@ -2,6 +2,8 @@
 mode: agent
 description: "Process all overnight agent reports -- discover, analyze, fix everything, commit"
 ---
+Model tier: **sonnet** — invoke this prompt in a Sonnet session.
+
 # Triage Agent Reports
 
 Process all overnight agent reports. Discovers every report using timestamp-based discovery, checks for agent failures, synthesizes findings, proposes an action plan, and implements all fixes. Reports are never committed -- they stay on disk as local operational history.

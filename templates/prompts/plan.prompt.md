@@ -2,6 +2,8 @@
 mode: agent
 description: "Create a phased implementation plan with pseudocode and success criteria"
 ---
+Model tier: **opus** — invoke this prompt in an Opus session.
+
 Create an implementation plan for: ${input:feature}
 
 Process:

@@ -2,6 +2,8 @@
 mode: agent
 description: "Resolve all findings from the pre-launch audit with parallel TDD agents"
 ---
+Model tier: **sonnet** — invoke this prompt in a Sonnet session.
+
 # Remediate Pre-Launch Findings
 
 Resolve all findings from the pre-launch audit. Creates GitHub issues, orchestrates parallel TDD agents in worktrees, merges sequentially, verifies CI, and reports.

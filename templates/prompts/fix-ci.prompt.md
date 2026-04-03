@@ -2,6 +2,7 @@
 mode: agent
 description: Self-healing CI — diagnose and fix all failing tests autonomously
 ---
+Model tier: **sonnet** — invoke this prompt in a Sonnet session.
 
 Self-healing CI: diagnose and fix all failing tests autonomously.
 
