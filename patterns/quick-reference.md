@@ -75,6 +75,8 @@ Stack: `[node]` `[python]` `[macos]` `[github]` (omitted = all stacks)
 
 29. **Only the main agent pushes -- worktree agents commit locally** `[universal]` -- N independent pushes trigger N x M CI runs. Agents commit locally, main agent batch-pushes all branches, creates PRs, monitors CI centrally.
 
+44. **Parallel agents run scoped tests only -- full suite runs once at integration** `[universal]` -- N agents each running the full test suite creates N x workers processes that exhaust CPU/memory. Agents test only their changed files; limit concurrent agents to 3-4; run the full suite once after merging.
+
 ## Deployment & Resources
 
 30. **Merging to main IS deploying to production** `[universal]` -- in projects with CI/CD, a merge is a deployment. Dependabot PRs target main by default -- merging them deploys to production.

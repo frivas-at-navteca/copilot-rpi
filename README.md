@@ -51,7 +51,7 @@ The full Research-Plan-Implement pattern adapted for GitHub Copilot, based on Hu
 
 ### Known Error Patterns (`patterns/`)
 
-A catalog of 38 recurring agent errors documented from real sessions. Each entry includes the symptom, root cause, correct approach, and what to avoid:
+A catalog of 39 recurring agent errors documented from real sessions. Each entry includes the symptom, root cause, correct approach, and what to avoid:
 
 - Git operations (pre-commit hooks, push rejections, worktrees)
 - GitHub CLI (`gh` field names, CI status checking)

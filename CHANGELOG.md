@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-04-04
+
+### Added
+
+- **Error #39:** Parallel agents each run full test suite, exhausting local
+  resources. N agents x full suite = N x workers processes competing for CPU
+  and memory. Agents must run scoped tests only; full suite runs once at
+  integration. Ported from cc-rpi Error #63.
+- **Rule #44:** Parallel agents run scoped tests only -- full suite runs once
+  at integration.
+
 ## [1.13.0] - 2026-03-28
 
 ### Added
